@@ -14,8 +14,8 @@ Flashcards made from anything you read, built for studying for school tests.
 - **Link:** in the card maker, open a deck and tap **Send as link**. The whole deck is inside the link (after `#d=`), so nothing is stored on a server. Opening it adds the deck to the study app. If tapping doesn't work, paste the link into the **Got a deck link?** box.
 - **File:** tap **Save as file** and use **Import deck** in the study app.
 
-Links point to `https://brittsjo.com/cards/` by default. Change it under "Study app address" in the card maker, or edit `DEFAULT_STUDY_URL` in the code.
+Links point to `https://vbz-p.github.io/card-maker/` (GitHub Pages) by default. Change it under "Study app address" in the card maker, or edit `DEFAULT_STUDY_URL` in the code.
 
 ## Hosting the study app
 
-Upload `index.html` to any static host, for example a `cards/` folder on your website or GitHub Pages.
+Upload `index.html` to any static host, It is live on GitHub Pages at https://vbz-p.github.io/card-maker/.
