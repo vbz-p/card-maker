@@ -1,0 +1,747 @@
+<title>Card Maker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=Kalam:wght@400;700&display=swap">
+<style>
+/* Layout: a study desk — ruled index cards (red header line, blue rules) on a cool blotter, one column, thumb-reachable tabs */
+:root{
+  --desk:#e9edf3; --card:#fffefb; --ink:#1c2340; --muted:#5d6684; --line:#cdd6e6;
+  --rule:#a9c0e6; --redrule:#e0524d; --hi:#ffe14d; --hi-ink:#1c2340;
+  --accent:#2b4fd8; --accent-ink:#ffffff; --good:#1f8f5a; --bad:#c8402f; --shadow:0 1px 0 rgba(28,35,64,.06),0 8px 24px -12px rgba(28,35,64,.28);
+  --f-display:"Bricolage Grotesque",ui-rounded,system-ui,sans-serif;
+  --f-body:"Nunito Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-hand:"Kalam","Comic Sans MS","Segoe Print",cursive;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --desk:#121726; --card:#1d2338; --ink:#eef1fb; --muted:#9aa3c2; --line:#2e3654;
+  --rule:#34437a; --redrule:#e86a62; --hi:#e8c93a; --hi-ink:#151a2c;
+  --accent:#7d9bff; --accent-ink:#0e1222; --good:#4cc68c; --bad:#f07a68; --shadow:0 1px 0 rgba(0,0,0,.3),0 10px 28px -12px rgba(0,0,0,.7); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --desk:#121726; --card:#1d2338; --ink:#eef1fb; --muted:#9aa3c2; --line:#2e3654;
+  --rule:#34437a; --redrule:#e86a62; --hi:#e8c93a; --hi-ink:#151a2c;
+  --accent:#7d9bff; --accent-ink:#0e1222; --good:#4cc68c; --bad:#f07a68; --shadow:0 1px 0 rgba(0,0,0,.3),0 10px 28px -12px rgba(0,0,0,.7); color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--desk);color:var(--ink);font:16px/1.5 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 96px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--desk)}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.1}
+
+/* header */
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-top:20px}
+.brand{font-size:30px;font-weight:800;letter-spacing:-.02em}
+.brand mark{background:linear-gradient(transparent 55%,var(--hi) 55%,var(--hi) 92%,transparent 92%);color:inherit;padding:0 2px}
+.who{font-size:13px;color:var(--muted)}
+
+/* tabs: bottom bar */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--card);border-top:1px solid var(--line);
+  display:flex;justify-content:center;gap:4px;
+  padding:8px max(16px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+nav.tabs button{flex:1;max-width:200px;border:0;background:none;padding:8px 6px;border-radius:12px;font-weight:700;font-size:14px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs button svg{width:22px;height:22px}
+nav.tabs button[aria-selected="true"]{color:var(--ink);background:var(--desk)}
+
+/* generic */
+.btn{border:0;border-radius:12px;padding:12px 18px;font-weight:700;background:var(--accent);color:var(--accent-ink);display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn.hi{background:var(--hi);color:var(--hi-ink)}
+.btn.danger{background:transparent;color:var(--bad);box-shadow:inset 0 0 0 1.5px var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row > .grow{flex:1;min-width:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--card);padding:10px 16px;border-radius:12px;font-weight:600;z-index:30;max-width:calc(100% - 32px)}
+.panel{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:18px;display:flex;flex-direction:column;gap:14px}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--desk);color:var(--muted)}
+.pill.ex{background:var(--hi);color:var(--hi-ink)}
+
+/* index card look */
+.index{background:var(--card);border-radius:6px;box-shadow:var(--shadow);position:relative;
+  background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 31px,var(--rule) 31px,var(--rule) 32px);
+  background-position:0 52px;background-size:100% calc(100% - 52px);background-repeat:no-repeat}
+.index::before{content:"";position:absolute;left:0;right:0;top:51px;height:2px;background:var(--redrule);opacity:.8}
+
+/* deck list */
+.decks{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.deck{border:0;text-align:left;padding:14px 16px 16px;min-height:150px;display:flex;flex-direction:column;gap:6px;color:var(--ink)}
+.deck h3{font-size:19px;height:30px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.deck .meta{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted)}
+.bar{height:8px;border-radius:99px;background:var(--desk);overflow:hidden;flex:1}
+.bar > i{display:block;height:100%;background:var(--good);border-radius:99px}
+.empty{padding:22px;text-align:center;color:var(--muted)}
+
+/* make */
+textarea{width:100%;min-height:170px;resize:vertical;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--card);line-height:1.5}
+input[type=text]{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card)}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.drop.over{border-color:var(--accent)}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumbs figure{margin:0;position:relative}
+.thumbs img{width:64px;height:64px;object-fit:cover;border-radius:8px;display:block}
+.thumbs button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:var(--ink);color:var(--card);font-size:13px;line-height:22px;padding:0}
+.seg{display:inline-flex;background:var(--desk);border-radius:12px;padding:3px}
+.seg button{border:0;background:none;padding:7px 14px;border-radius:9px;font-weight:700;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+
+/* card editor list */
+.clist{display:flex;flex-direction:column;gap:10px}
+.citem{background:var(--card);border-radius:12px;box-shadow:var(--shadow);padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:6px 10px}
+.citem textarea{min-height:0;height:auto;padding:6px 8px;border-radius:8px;border-color:transparent;background:transparent;resize:none;field-sizing:content}
+.citem textarea:hover,.citem textarea:focus{border-color:var(--line)}
+.citem .q{font-weight:700}
+.citem .a{font-family:var(--f-hand);font-size:17px}
+.citem .x{grid-row:1 / span 2;grid-column:2;align-self:start;border:0;background:none;color:var(--muted);font-size:20px;width:32px;height:32px;border-radius:8px}
+
+/* study */
+.stage{perspective:1400px}
+.flip{position:relative;width:100%;aspect-ratio:5/3.4;max-height:60vh;border:0;padding:0;background:none;transition:transform .5s cubic-bezier(.3,.7,.3,1);transform-style:preserve-3d}
+.flip.on{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;padding:12px 22px 22px;text-align:center}
+.face .tag{height:40px;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.face .txt{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding-top:14px}
+.face.front .txt{font-family:var(--f-display);font-weight:700;font-size:clamp(20px,5vw,28px);line-height:1.25}
+.face.ans{transform:rotateY(180deg)}
+.face.ans .txt{font-family:var(--f-hand);font-size:clamp(21px,5.4vw,30px);line-height:1.3}
+.hint{text-align:center;font-size:13px;color:var(--muted)}
+.grade{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grade .again{background:transparent;color:var(--bad);box-shadow:inset 0 0 0 2px var(--bad)}
+.grade .got{background:var(--good);color:#fff}
+.goals{display:flex;flex-direction:column;gap:6px}
+.goal{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;text-align:left;border:0;background:var(--desk);border-radius:10px;padding:9px 12px;color:var(--ink)}
+.goal .gname{font-weight:600;min-width:0}
+.goal .gmeta{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.goal .bar{grid-column:1 / -1;height:6px;background:var(--line)}
+.goal.missing .gmeta{color:var(--bad)}
+button.goal:hover{box-shadow:inset 0 0 0 1.5px var(--line)}
+.explain{background:var(--desk);border-radius:12px;padding:12px 14px;font-size:15px;white-space:pre-wrap}
+.progress .bar{background:var(--line)}
+.progress{display:flex;align-items:center;gap:10px;font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted)}
+
+/* quiz */
+.choices{display:grid;gap:10px}
+.choice{border:0;text-align:left;padding:14px 16px;border-radius:12px;background:var(--card);box-shadow:inset 0 0 0 1.5px var(--line);font-weight:600;min-height:52px}
+.choice.right{box-shadow:inset 0 0 0 2.5px var(--good);background:color-mix(in srgb,var(--good) 12%,var(--card))}
+.choice.wrong{box-shadow:inset 0 0 0 2.5px var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--card))}
+.score{font-family:var(--f-display);font-weight:800;font-size:64px;line-height:1;font-variant-numeric:tabular-nums}
+
+.back{border:0;background:none;padding:6px 0;font-weight:700;color:var(--muted);display:inline-flex;gap:6px;align-items:center;align-self:flex-start}
+.confirm{background:color-mix(in srgb,var(--bad) 8%,var(--card));border-radius:12px;padding:12px 14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.spin{width:18px;height:18px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.flip{transition:none}.spin{animation-duration:3s}}
+</style>
+
+<div class="wrap" id="app">
+  <header>
+    <div>
+      <div class="brand">Card <mark>Maker</mark></div>
+      <div class="who" id="who">Flashcards from anything you read</div>
+    </div>
+  </header>
+  <main id="view"></main>
+</div>
+<nav class="tabs" role="tablist" id="tabs">
+  <button role="tab" data-tab="decks" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="14" height="12" rx="2"/><path d="M7 7V5h14v12h-4"/></svg>My decks</button>
+  <button role="tab" data-tab="make" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Make cards</button>
+  <button role="tab" data-tab="library" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 19c0-3 3-5 6-5s6 2 6 5M15 19c0-2 1.5-3.5 4-3.5"/></svg>Shared</button>
+</nav>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+"use strict";
+const STUDY_APP = false; // the study-only build sets this to true
+const DEFAULT_STUDY_URL = "https://brittsjo.com/cards/";
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+let toastT;
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
+
+/* ---------- example deck (shown only when you have no decks yet) ---------- */
+const EXAMPLE = { id: "example", example: true, title: "The water cycle", goals: ["Evaporation","Condensation and clouds","Precipitation","What drives the water cycle"], cards: [
+  { id:"e1", goal:"Evaporation", q:"What is evaporation?", a:"Water turning from liquid into vapour, mostly because the sun heats it.", wrong:["Water vapour turning into clouds","Rain soaking into the ground","Ice melting into water"], box:0 },
+  { id:"e2", goal:"Condensation and clouds", q:"What happens during condensation?", a:"Water vapour cools and turns into tiny droplets, forming clouds.", wrong:["Water heats up and rises","Plants release water from leaves","Snow melts in spring"], box:0 },
+  { id:"e3", goal:"Precipitation", q:"What is precipitation?", a:"Water falling from clouds as rain, snow, sleet or hail.", wrong:["Water flowing in rivers to the sea","Water stored underground","Water rising from oceans"], box:0 },
+  { id:"e4", goal:"Evaporation", q:"What is transpiration?", a:"Plants giving off water vapour through their leaves.", wrong:["Animals drinking from lakes","Rain running down hills","Clouds moving with the wind"], box:0 },
+  { id:"e5", goal:"What drives the water cycle", q:"What powers the water cycle?", a:"Energy from the sun, plus gravity pulling water back down.", wrong:["The moon's light","Earth's magnetic field","Ocean currents alone"], box:0 }
+]};
+
+/* ---------- storage: your decks in the shared store (private to you), or this browser as fallback ---------- */
+const state = { decks: [], library: [], tab: "decks", route: null, uid: null, mode: "local", names: {} };
+let db = null, user = null, sample = null, downloads = null, imgLimits = null;
+
+const LS = "cardmaker.decks.v1";
+function lsRead(){ try { return JSON.parse(localStorage.getItem(LS) || "[]"); } catch { return []; } }
+function lsWrite(){ try { localStorage.setItem(LS, JSON.stringify(state.decks)); } catch {} }
+
+function myCol(){ return db.collection("data/users/" + state.uid); }
+async function saveDeck(deck){
+  deck.updatedAt = Date.now();
+  const i = state.decks.findIndex(d => d.id === deck.id);
+  if (i >= 0) state.decks[i] = deck; else state.decks.unshift(deck);
+  if (state.mode === "db") {
+    const { id, ...body } = deck;
+    try { await myCol().doc(id).set(JSON.parse(JSON.stringify(body))); }
+    catch (e) { toast("Couldn't save. Check your connection and try again."); }
+  } else lsWrite();
+}
+async function deleteDeck(id){
+  state.decks = state.decks.filter(d => d.id !== id);
+  if (state.mode === "db") { try { await myCol().doc(id).delete(); } catch { toast("Couldn't delete right now."); } }
+  else lsWrite();
+}
+function cleanCard(c, goals = []){
+  const card = { id: uid(), q: String(c.q).trim(), a: String(c.a).trim(), wrong: Array.isArray(c.wrong) ? c.wrong.slice(0,3).map(String) : [], box: 0 };
+  const g = c.goal ? String(c.goal).trim() : "";
+  if (g && (!goals.length || goals.includes(g))) card.goal = g;
+  if (c.check === true) card.check = true;
+  return card;
+}
+const portable = d => ({ title: d.title, goals: d.goals || [], cards: d.cards.map(({ q, a, wrong, goal, check }) => ({ q, a, wrong: wrong || [], ...(goal ? { goal } : {}), ...(check ? { check } : {}) })) });
+function goalStats(d){
+  return (d.goals || []).map(g => { const cs = d.cards.filter(c => c.goal === g); return { g, total: cs.length, known: cs.filter(c => (c.box||0) >= 2).length }; });
+}
+const b64u = bytes => { let s = ""; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+const unb64u = str => { const bin = atob(str.replace(/-/g, "+").replace(/_/g, "/")); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; };
+async function streamBytes(bytes, stream){ const r = new Blob([bytes]).stream().pipeThrough(stream); return new Uint8Array(await new Response(r).arrayBuffer()); }
+async function packDeck(d){
+  const p = portable(d);
+  const raw = new TextEncoder().encode(JSON.stringify({ t: p.title, g: p.goals, c: p.cards.map(c => [c.q, c.a, c.wrong || [], c.goal || "", c.check ? 1 : 0]) }));
+  if (typeof CompressionStream === "function") { try { return "z" + b64u(await streamBytes(raw, new CompressionStream("deflate-raw"))); } catch {} }
+  return "j" + b64u(raw);
+}
+async function unpackDeck(code){
+  const kind = code[0], bytes = unb64u(code.slice(1));
+  const raw = kind === "z" ? await streamBytes(bytes, new DecompressionStream("deflate-raw")) : bytes;
+  const o = JSON.parse(new TextDecoder().decode(raw));
+  const goals = Array.isArray(o.g) ? o.g.map(String) : [];
+  const cards = (o.c || []).filter(c => c && c[0] && c[1]).map(c => cleanCard({ q: c[0], a: c[1], wrong: c[2], goal: c[3], check: c[4] === 1 }, goals));
+  if (!cards.length) throw new Error("empty");
+  return { title: String(o.t || "Shared deck").slice(0, 80), goals, cards };
+}
+// a deck link carries the whole deck after "#d=", so nothing is stored on a server
+function findLinkCode(text){ const m = String(text || "").match(/#d=([A-Za-z0-9_-]+)/); return m ? m[1] : null; }
+async function addFromLink(code){
+  const key = code.slice(0, 120);
+  const have = state.decks.find(x => x.linkKey === key);
+  if (have) { toast("You already have “" + have.title + "”"); return go("decks", { name: "deck", id: have.id }); }
+  const deck = { id: uid(), linkKey: key, createdAt: Date.now(), ...(await unpackDeck(code)) };
+  await saveDeck(deck);
+  toast("Added “" + deck.title + "”");
+  go("decks", { name: "deck", id: deck.id });
+}
+function studyBase(){ try { return localStorage.getItem("cardmaker.studyurl") || DEFAULT_STUDY_URL; } catch { return DEFAULT_STUDY_URL; } }
+const deckById = id => id === "example" ? EXAMPLE : state.decks.find(d => d.id === id);
+
+/* ---------- boot ---------- */
+async function boot(){
+  state.decks = lsRead();
+  render();
+  const code = findLinkCode(location.hash);
+  if (code) {
+    try { history.replaceState(null, "", location.pathname + location.search); } catch {}
+    try { await addFromLink(code); } catch { toast("That deck link is broken or cut off. Ask for a new one."); }
+  }
+  window.addEventListener("hashchange", async () => {
+    const c = findLinkCode(location.hash); if (!c) return;
+    try { history.replaceState(null, "", location.pathname + location.search); } catch {}
+    try { await addFromLink(c); } catch { toast("That deck link is broken or cut off. Ask for a new one."); }
+  });
+  if (!window.claude) return;
+  const [d, u, s, dl] = await Promise.all(["db","user","sample","downloads"].map(n => claude.use(n).catch(() => null)));
+  db = d; user = u; sample = s; downloads = dl;
+  if (sample) imgLimits = await sample.limits().catch(() => null);
+  if (db && user) {
+    const id = await user.id().catch(() => null);
+    let canWrite = true; try { canWrite = (await user.can("data.write")) !== false; } catch {}
+    if (id && canWrite) {
+      state.uid = id; state.mode = "db";
+      const local = lsRead();
+      myCol().onSnapshot(snap => {
+        state.decks = snap.docs.map(x => ({ id: x.id, ...structuredClone(x.data()) })).sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0));
+        // move any decks made before signing in into the store, once
+        if (local.length) { const have = new Set(state.decks.map(x => x.id)); local.filter(x => !have.has(x.id)).forEach(x => saveDeck(x)); local.length = 0; try{localStorage.removeItem(LS);}catch{} }
+        softRender();
+      }, () => toast("Your decks couldn't load. Reopen the page to try again."));
+      db.collection("library").orderBy("sharedAt","desc").limit(60).onSnapshot(async snap => {
+        state.library = snap.docs.map(x => ({ id: x.id, ...structuredClone(x.data()) }));
+        await resolveNames(); softRender();
+      }, () => {});
+      try { const me = await user.me(); if (me?.name) $("#who").textContent = "Hi " + me.name.split(" ")[0] + "! Flashcards from anything you read"; } catch {}
+    }
+  }
+  render();
+}
+async function resolveNames(){
+  if (!user) return;
+  const ids = [...new Set(state.library.map(x => x.by).filter(Boolean))];
+  if (!ids.length) return;
+  try { const ps = await user.profiles(ids); ids.forEach(i => state.names[i] = ps[i]?.name || "Someone"); } catch {}
+}
+
+/* ---------- routing ---------- */
+function go(tab, route = null){ state.tab = tab; state.route = route; render(); window.scrollTo(0,0); }
+$("#tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) go(b.dataset.tab); });
+// re-render lists when data arrives, but never interrupt a study or quiz in progress or wipe typing
+function softRender(){ if (!state.route && state.tab !== "make") render(); else if (state.route?.name === "deck") render(); }
+
+function render(){
+  document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === state.tab)));
+  const v = $("#view");
+  const r = state.route;
+  if (r?.name === "deck") return renderDeck(v, r.id);
+  if (r?.name === "study") return renderStudy(v);
+  if (r?.name === "quiz") return renderQuiz(v);
+  if (r?.name === "preview") return renderPreview(v);
+  if (state.tab === "make") return renderMake(v);
+  if (state.tab === "library") return renderLibrary(v);
+  renderDecks(v);
+}
+
+/* ---------- My decks ---------- */
+function known(d){ return d.cards.filter(c => (c.box||0) >= 2).length; }
+function deckTile(d){
+  const pct = d.cards.length ? Math.round(100 * known(d) / d.cards.length) : 0;
+  return `<button class="deck index" data-open="${esc(d.id)}">
+    <h3>${esc(d.title)}</h3>
+    <div class="small muted">${d.cards.length} cards ${d.example ? '<span class="pill ex">Example</span>' : ""}${d.shared ? ' <span class="pill">Shared</span>' : ""}</div>
+    <div class="meta"><div class="bar" aria-label="${pct}% learned"><i style="width:${pct}%"></i></div><span>${pct}% learned</span></div>
+  </button>`;
+}
+function renderDecks(v){
+  const list = state.decks.length ? state.decks : [EXAMPLE];
+  v.innerHTML = `<div class="wrap" style="gap:14px">
+    <div class="row"><h2 class="grow" style="font-size:22px">My decks</h2>
+      <label class="btn ghost" for="importFile" style="padding:10px 14px">Import file</label>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+      <button class="btn" data-new>New deck</button></div>
+    ${!state.decks.length ? `<p class="muted small" style="margin:0">Here's an example deck to try. Tap <b>New deck</b> to make your own from a textbook page, notes or an article.</p>` : ""}
+    <div class="decks">${list.map(deckTile).join("")}</div>
+    ${STUDY_APP ? `<div class="panel" style="gap:10px"><div class="label">Got a deck link?</div>
+      <p class="small muted" style="margin:0">If tapping the link didn't add it here, copy the link and paste it below.</p>
+      <div class="row"><input type="text" id="pasteLink" class="grow" placeholder="Paste the link here" aria-label="Deck link"><button class="btn" id="addLink">Add</button></div></div>` : ""}
+    ${state.mode === "local" ? `<p class="small muted" style="margin:0">Decks are saved in this browser only. Open this page signed in to Claude to keep them on every device and share them.</p>` : ""}
+  </div>`;
+  v.onclick = e => {
+    const o = e.target.closest("[data-open]"); if (o) return go("decks", { name: "deck", id: o.dataset.open });
+    if (e.target.closest("[data-new]")) go("make");
+  };
+  if ($("#addLink")) {
+    const go2 = async () => { const code = findLinkCode($("#pasteLink").value); if (!code) return toast("That doesn't look like a deck link."); try { await addFromLink(code); } catch { toast("That link is broken or cut off. Ask for a new one."); } };
+    $("#addLink").onclick = go2;
+    $("#pasteLink").onkeydown = e => { if (e.key === "Enter") go2(); };
+  }
+  $("#importFile").onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      const j = JSON.parse(await f.text());
+      if (!Array.isArray(j.cards)) throw 0;
+      const goals = Array.isArray(j.goals) ? j.goals.map(String) : [];
+      const deck = { id: uid(), title: String(j.title || "Imported deck").slice(0,80), goals, cards: j.cards.filter(c => c.q && c.a).map(c => cleanCard(c, goals)), createdAt: Date.now() };
+      await saveDeck(deck); toast("Imported " + deck.cards.length + " cards"); render();
+    } catch { toast("That file isn't a Card Maker deck."); }
+  };
+}
+
+/* ---------- Make ---------- */
+const make = { text: "", images: [], count: 12, busy: false, ctl: null, draft: null, error: "" };
+function renderMake(v){
+  const canImg = !!imgLimits?.images;
+  const ai = !!sample;
+  v.innerHTML = `<div class="wrap" style="gap:14px">
+    <h2 style="font-size:22px">Make cards</h2>
+    <div class="panel">
+      <div class="label">1 · What are you studying?</div>
+      <p class="small" style="margin:0">Got a test overview (<i>Inför provet</i>, what you need to know)? Add it together with the textbook pages. The cards will focus on what's on the test.</p>
+      <textarea id="src" placeholder="Paste text from a textbook, your notes, a web article, a worksheet…">${esc(make.text)}</textarea>
+      <div class="drop" id="drop">
+        ${canImg ? `<label class="btn ghost" for="pics" style="padding:10px 14px">Add photos of pages</label><input id="pics" type="file" accept="${esc(imgLimits.images.mediaTypes.join(","))}" multiple hidden>` : ""}
+        <label class="btn ghost" for="txtf" style="padding:10px 14px">Add a text file</label><input id="txtf" type="file" accept=".txt,.md,text/plain" hidden>
+        <div class="thumbs" id="thumbs"></div>
+        <span class="small muted">${canImg ? "Snap a photo of a book page and add it here." : ""}</span>
+      </div>
+      <div class="label">2 · How many cards?</div>
+      <div class="seg" id="count">${[6,12,20,30].map(n => `<button aria-pressed="${n===make.count}" data-n="${n}">${n}</button>`).join("")}</div>
+      ${make.error ? `<div class="confirm small">${esc(make.error)}</div>` : ""}
+      <div class="row">
+        <button class="btn hi grow" id="gen" ${make.busy || !ai ? "disabled" : ""}>${make.busy ? '<span class="spin"></span> Reading and writing cards…' : "Make my flashcards"}</button>
+        ${make.busy ? `<button class="btn ghost" id="stop">Stop</button>` : ""}
+      </div>
+      ${!ai ? `<p class="small muted" style="margin:0">Automatic cards need this page opened in Claude while signed in. You can still type cards yourself below.</p>` : `<p class="small muted" style="margin:0">Cards are written in the same language as your text. It usually takes 10–40 seconds.</p>`}
+    </div>
+    <div class="row"><span class="muted small grow">Prefer to write them yourself?</span><button class="btn ghost" id="blank">Start a blank deck</button></div>
+  </div>`;
+  const src = $("#src");
+  src.oninput = () => make.text = src.value;
+  drawThumbs();
+  $("#count").onclick = e => { const b = e.target.closest("[data-n]"); if (!b) return; make.count = +b.dataset.n; $("#count").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); };
+  if (canImg) $("#pics").onchange = e => { addImages(e.target.files); e.target.value = ""; };
+  $("#txtf").onchange = async e => { const f = e.target.files[0]; if (!f) return; make.text = (make.text ? make.text + "\n\n" : "") + (await f.text()); src.value = make.text; e.target.value = ""; };
+  const drop = $("#drop");
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+  drop.ondragleave = () => drop.classList.remove("over");
+  drop.ondrop = async e => { e.preventDefault(); drop.classList.remove("over");
+    const fs = [...e.dataTransfer.files];
+    if (canImg) addImages(fs.filter(f => f.type.startsWith("image/")));
+    for (const f of fs.filter(f => f.type.startsWith("text/"))) { make.text += "\n\n" + await f.text(); src.value = make.text; } };
+  $("#gen").onclick = generate;
+  if ($("#stop")) $("#stop").onclick = () => make.ctl?.abort();
+  $("#blank").onclick = () => { make.draft = { id: uid(), title: "", cards: [{ id: uid(), q: "", a: "", wrong: [], box: 0 }], createdAt: Date.now() }; go("make", { name: "preview" }); };
+}
+function addImages(files){
+  const max = imgLimits?.images?.maxCount || 5;
+  for (const f of files) { if (make.images.length >= max) { toast("Up to " + max + " photos at a time."); break; } make.images.push({ file: f, url: URL.createObjectURL(f) }); }
+  drawThumbs();
+}
+function drawThumbs(){
+  const t = $("#thumbs"); if (!t) return;
+  t.innerHTML = make.images.map((m, i) => `<figure><img src="${m.url}" alt="Photo ${i+1}"><button aria-label="Remove photo" data-rm="${i}">×</button></figure>`).join("");
+  t.onclick = e => { const b = e.target.closest("[data-rm]"); if (!b) return; make.images.splice(+b.dataset.rm, 1); drawThumbs(); };
+}
+const ERR = {
+  not_granted: "Card Maker needs your OK to use Claude. Reopen the page and choose Allow.",
+  rate_limited: "Claude is busy or you've hit a usage limit. Wait a minute and try again.",
+  prompt_too_large: "That's a lot of text. Try one chapter or a few pages at a time.",
+  image_rejected: "One of the photos couldn't be read. Try a JPG or PNG under 20 MB.",
+  invalid_json: "The cards came back garbled. Press the button again.",
+  refused: "Claude couldn't make cards from that. Try different text.",
+  sampling_disabled: "Claude isn't available for this account right now."
+};
+async function generate(){
+  const text = make.text.trim().slice(0, 60000);
+  if (!text && !make.images.length) { make.error = "Paste some text or add a photo first."; return render(); }
+  make.error = ""; make.busy = true; make.ctl = new AbortController(); render();
+  const prompt = `You make study flashcards for a 13-year-old student preparing for a school test.
+The material may be photos${make.images.length ? " (attached" + (text ? ") and text (below)" : ")") : ""}${!make.images.length ? " and text below" : ""}. It can contain two kinds of pages:
+A) A TEST OVERVIEW / STUDY GUIDE from the teacher: it lists what the student must know for the test. Signs: headings like "Inför provet", "Det här ska du kunna", "Mål", "Centralt innehåll", "Study guide", "You should be able to", "Learning goals", "Test overview", bullet lists of topics or concepts, or practice questions the student should be able to answer.
+B) STUDY MATERIAL: textbook pages, notes, articles, worksheets.
+
+First decide whether any part is a test overview (A).
+
+If there IS a test overview:
+- List each topic, goal, concept or question from it in "goals" (short, max 8 words each, in its own language, in the order given). Keep the teacher's practice questions as goals too.
+- Build the deck around those goals: every goal gets at least one card, and important goals get 2-3. Do not spend cards on things the overview does not mention.
+- When the overview gives an actual question, use that question (lightly shortened if needed) as a card's "q".
+- Take answers from the study material (B) when it is there. If the answer is not in the material, answer from reliable school-level knowledge and set "check": true on that card so the student checks it against the textbook.
+- Set "goal" on every card to the exact text of the goal it covers.
+- Write about ${make.count} cards, but go up to ${make.count + 10} if needed so every goal is covered.
+
+If there is NO test overview:
+- Set "goals" to [] and write exactly ${make.count} cards on the most important ideas, facts, words and causes in the material.
+- Use only information that is in the material.
+
+Rules for every card:
+- Write in the SAME LANGUAGE as the material (Swedish material gets Swedish cards).
+- "q" tests one thing. Mix "what", "why", "how" and key-term questions. Max 20 words.
+- "a" is short and clear, max 20 words, written so a 13-year-old understands it.
+- "wrong" holds 3 believable but clearly incorrect answers of similar length and style, for a multiple-choice quiz.
+- "title" is a short deck name (2-5 words) for the test or topic, in the material's language.
+
+Reply with only JSON in this shape:
+{"title":"...","guideFound":true,"goals":["..."],"cards":[{"q":"...","a":"...","wrong":["...","...","..."],"goal":"...","check":false}]}
+${text ? "\nMATERIAL:\n" + text : ""}`;
+  try {
+    const opts = { signal: make.ctl.signal };
+    if (make.images.length) opts.images = make.images.map(m => m.file);
+    const out = await sample.json(prompt, opts);
+    const goals = Array.isArray(out?.goals) ? out.goals.map(g => String(g).trim()).filter(Boolean).slice(0, 40) : [];
+    const cards = (Array.isArray(out?.cards) ? out.cards : []).filter(c => c && c.q && c.a)
+      .map(c => cleanCard(c, goals));
+    if (!cards.length) throw { code: "invalid_json" };
+    make.draft = { id: uid(), title: String(out.title || "New deck").slice(0, 80), cards, goals, createdAt: Date.now() };
+    make.busy = false;
+    go("make", { name: "preview" });
+  } catch (e) {
+    make.busy = false;
+    make.error = e?.code === "cancelled" ? "" : (ERR[e?.code] || "Something went wrong making the cards. Try again.");
+    render();
+  }
+}
+
+/* ---------- Preview / edit a deck ---------- */
+function cardEditor(cards){
+  return `<div class="clist" id="clist">${cards.map((c, i) => `
+    <div class="citem" data-i="${i}">
+      <textarea class="q" rows="1" data-f="q" aria-label="Question ${i+1}" placeholder="Question">${esc(c.q)}</textarea>
+      <button class="x" data-del="${i}" aria-label="Delete card ${i+1}">×</button>
+      <textarea class="a" rows="1" data-f="a" aria-label="Answer ${i+1}" placeholder="Answer">${esc(c.a)}</textarea>
+    </div>`).join("")}</div>
+    <button class="btn ghost" id="addCard">Add a card</button>`;
+}
+function bindEditor(cards, onChange){
+  const box = $("#clist");
+  box.oninput = e => { const t = e.target.closest("textarea"); if (!t) return; const i = +t.closest(".citem").dataset.i; cards[i][t.dataset.f] = t.value; onChange?.(); };
+  box.onclick = e => { const b = e.target.closest("[data-del]"); if (!b) return; cards.splice(+b.dataset.del, 1); onChange?.(true); };
+  $("#addCard").onclick = () => { cards.push({ id: uid(), q: "", a: "", wrong: [], box: 0 }); onChange?.(true); setTimeout(() => { const all = document.querySelectorAll("#clist .q"); all[all.length-1]?.focus(); }, 0); };
+}
+function goalsPanel(d, clickable){
+  const st = goalStats(d);
+  if (!st.length) return "";
+  const checks = d.cards.filter(c => c.check).length;
+  return `<div class="panel" style="gap:10px">
+    <div class="label">${clickable ? "On the test" : "Test overview found"}</div>
+    ${!clickable ? `<p class="small muted" style="margin:0">Cards are built around these ${st.length} topics.${checks ? ` ${checks} answer${checks > 1 ? "s weren't" : " wasn't"} in your pages, so ${checks > 1 ? "they're" : "it's"} marked <span class="pill ex">Check</span>. Look them up in the book.` : ""}</p>` : `<p class="small muted" style="margin:0">Tap a topic to study just those cards.</p>`}
+    <div class="goals">${st.map(x => {
+      const pct = x.total ? Math.round(100 * x.known / x.total) : 0;
+      const inner = `<span class="gname">${esc(x.g)}</span><span class="gmeta">${x.total ? (clickable ? pct + "%" : x.total + " card" + (x.total > 1 ? "s" : "")) : "No cards"}</span>${clickable && x.total ? `<span class="bar"><i style="width:${pct}%"></i></span>` : ""}`;
+      return clickable && x.total ? `<button class="goal" data-goal="${esc(x.g)}">${inner}</button>` : `<div class="goal${x.total ? "" : " missing"}">${inner}</div>`;
+    }).join("")}</div>
+  </div>`;
+}
+function renderPreview(v){
+  const d = make.draft; if (!d) return go("make");
+  v.innerHTML = `<div class="wrap" style="gap:14px">
+    <button class="back" id="bk">‹ Back</button>
+    <div class="panel">
+      <div class="label">Deck name</div>
+      <input type="text" id="title" value="${esc(d.title)}" placeholder="e.g. Vikings, chapter 3" maxlength="80">
+      <div class="small muted">${d.cards.length} cards. Fix anything that's wrong, then save.</div>
+    </div>
+    ${goalsPanel(d, false)}
+    ${cardEditor(d.cards)}
+    <button class="btn" id="save">Save deck</button>
+  </div>`;
+  $("#bk").onclick = () => go("make");
+  $("#title").oninput = e => d.title = e.target.value;
+  bindEditor(d.cards, re => re && renderPreview(v));
+  $("#save").onclick = async () => {
+    d.cards = d.cards.filter(c => c.q.trim() && c.a.trim());
+    if (!d.cards.length) return toast("Add at least one card with a question and answer.");
+    d.title = d.title.trim() || "My deck";
+    await saveDeck(d);
+    make.draft = null; make.text = ""; make.images = [];
+    toast("Saved " + d.cards.length + " cards");
+    go("decks", { name: "deck", id: d.id });
+  };
+}
+
+/* ---------- Deck page ---------- */
+let editing = false, confirmDel = false, linkFor = null, linkUrl = "";
+function renderDeck(v, id){
+  const d = deckById(id); if (!d) return go("decks");
+  const pct = d.cards.length ? Math.round(100 * known(d) / d.cards.length) : 0;
+  const due = d.cards.filter(c => (c.box||0) < 2).length;
+  v.innerHTML = `<div class="wrap" style="gap:14px">
+    <button class="back" id="bk">‹ My decks</button>
+    <div class="index" style="padding:12px 18px 20px">
+      <div style="height:40px;display:flex;align-items:center;justify-content:space-between" class="label"><span>${d.cards.length} cards</span><span>${pct}% learned</span></div>
+      <h2 style="font-size:28px;padding-top:12px;line-height:32px">${esc(d.title)}</h2>
+      <p style="margin:0;line-height:32px" class="muted">${due ? due + " still to learn" : "You know them all. Study again to stay sharp."}${d.example ? ' · <span class="pill ex">Example</span>' : ""}</p>
+    </div>
+    ${goalsPanel(d, true)}
+    <div class="grade">
+      <button class="btn" id="study" ${d.cards.length ? "" : "disabled"}>Study cards</button>
+      <button class="btn hi" id="quiz" ${d.cards.length >= 2 ? "" : "disabled"}>Take a quiz</button>
+    </div>
+    ${d.example ? `<p class="small muted" style="margin:0">This is an example. Make your own under <b>Make cards</b>.</p>` : `
+    <div class="row">
+      ${state.mode === "db" ? `<button class="btn ghost grow" id="share">${d.shared ? "Stop sharing" : "Share with friends"}</button>` : ""}
+      ${!STUDY_APP ? `<button class="btn hi grow" id="mklink">${linkFor === d.id ? "Hide link" : "Send as link"}</button>` : ""}
+      ${downloads ? `<button class="btn ghost grow" id="export">Save as file</button>` : ""}
+      <button class="btn ghost grow" id="edit">${editing ? "Done editing" : "Edit cards"}</button>
+    </div>
+    ${linkFor === d.id ? `<div class="panel" style="gap:10px">
+      <div class="label">Link to the study app</div>
+      <p class="small muted" style="margin:0">Send this in a message. Tapping it adds “${esc(d.title)}” to the study app. The whole deck is inside the link, so make a new link if you change the cards.</p>
+      <textarea id="linkOut" readonly rows="3" style="min-height:0;font-size:13px;word-break:break-all">${esc(linkUrl)}</textarea>
+      <div class="row"><button class="btn grow" id="copyLink">Copy link</button></div>
+      <details><summary class="small muted">Study app address</summary>
+        <div class="row" style="margin-top:8px"><input type="text" id="baseUrl" class="grow" value="${esc(studyBase())}" aria-label="Study app address"><button class="btn ghost" id="saveBase">Use</button></div>
+      </details>
+    </div>` : ""}
+    ${d.shared ? `<p class="small muted" style="margin:0">Anyone who opens Card Maker sees this deck under <b>Shared</b> and can save a copy.</p>` : ""}
+    ${editing ? `<input type="text" id="title" value="${esc(d.title)}" maxlength="80" aria-label="Deck name">${cardEditor(d.cards)}` : `
+    <div class="clist">${d.cards.map(c => `<div class="citem" style="grid-template-columns:1fr auto"><div class="q" style="font-weight:700">${esc(c.q)}</div><span>${c.check ? '<span class="pill ex">Check</span> ' : ""}<span class="pill">${(c.box||0) >= 2 ? "Known" : (c.box||0) === 1 ? "Getting there" : "New"}</span></span><div class="a" style="font-family:var(--f-hand);font-size:17px">${esc(c.a)}</div></div>`).join("")}</div>`}
+    ${confirmDel ? `<div class="confirm"><span class="grow">Delete “${esc(d.title)}” for good?</span><button class="btn danger" id="delYes">Delete</button><button class="btn ghost" id="delNo">Keep it</button></div>`
+                 : `<button class="btn danger" id="del">Delete deck</button>`}`}
+  </div>`;
+  $("#bk").onclick = () => { editing = false; confirmDel = false; go("decks"); };
+  $("#study").onclick = () => startStudy(d);
+  v.querySelectorAll("[data-goal]").forEach(b => b.onclick = () => startStudy(d, b.dataset.goal));
+  $("#quiz").onclick = () => startQuiz(d);
+  if (d.example) return;
+  let saveT;
+  const persist = () => { clearTimeout(saveT); saveT = setTimeout(() => saveDeck(d), 700); };
+  if ($("#edit")) $("#edit").onclick = async () => { if (editing) { d.cards = d.cards.filter(c => c.q.trim() && c.a.trim()); clearTimeout(saveT); await saveDeck(d); } editing = !editing; renderDeck(v, id); };
+  if (editing) { $("#title").oninput = e => { d.title = e.target.value || "My deck"; persist(); }; bindEditor(d.cards, re => { persist(); if (re) renderDeck(v, id); }); }
+  if ($("#share")) $("#share").onclick = () => toggleShare(d);
+  if ($("#mklink")) $("#mklink").onclick = async () => {
+    if (linkFor === d.id) { linkFor = null; return renderDeck(v, id); }
+    try { linkUrl = studyBase() + "#d=" + await packDeck(d); linkFor = d.id; } catch { toast("Couldn't make a link for this deck."); }
+    renderDeck(v, id);
+  };
+  if ($("#copyLink")) $("#copyLink").onclick = async () => {
+    try { await navigator.clipboard.writeText(linkUrl); toast("Link copied. Paste it in a message."); }
+    catch { const t = $("#linkOut"); t.focus(); t.select(); toast("Select the link and copy it."); }
+  };
+  if ($("#saveBase")) $("#saveBase").onclick = async () => {
+    let u = $("#baseUrl").value.trim(); if (!/^https?:\/\//.test(u)) return toast("Start the address with https://");
+    u = u.split("#")[0]; try { localStorage.setItem("cardmaker.studyurl", u); } catch {}
+    linkUrl = u + "#d=" + await packDeck(d); renderDeck(v, id);
+  };
+  if ($("#export")) $("#export").onclick = async () => {
+    const data = JSON.stringify({ app: "Card Maker", ...portable(d) }, null, 2);
+    try { await downloads.save({ filename: d.title.replace(/[^\p{L}\p{N} _-]/gu, "").trim().slice(0,40) + ".json", data }); toast("Saved file. Send it to a friend to import."); }
+    catch (e) { if (e?.code !== "declined" && e?.code !== "cancelled") toast("Couldn't save the file."); }
+  };
+  if ($("#del")) $("#del").onclick = () => { confirmDel = true; renderDeck(v, id); };
+  if ($("#delNo")) $("#delNo").onclick = () => { confirmDel = false; renderDeck(v, id); };
+  if ($("#delYes")) $("#delYes").onclick = async () => { confirmDel = false; if (d.shared) await unshare(d); await deleteDeck(d.id); toast("Deleted"); go("decks"); };
+}
+async function toggleShare(d){
+  if (d.shared) { await unshare(d); toast("No longer shared"); }
+  else {
+    try {
+      await db.collection("library").doc(d.id).set({ ...portable(d), by: state.uid, sharedAt: Date.now(), count: d.cards.length });
+      d.shared = true; await saveDeck(d); toast("Shared! Friends find it under Shared.");
+    } catch { toast("Couldn't share right now."); }
+  }
+  render();
+}
+async function unshare(d){ try { await db.collection("library").doc(d.id).delete(); } catch {} d.shared = false; await saveDeck(d); }
+
+/* ---------- Study (flip cards, simple boxes: New → Getting there → Known) ---------- */
+let S = null;
+function startStudy(d, goal){
+  const pool = goal ? d.cards.filter(c => c.goal === goal) : d.cards;
+  const learning = pool.filter(c => (c.box||0) < 2);
+  S = { deck: d, goal, queue: shuffle(learning.length ? learning : pool), done: 0, got: 0, flipped: false, explain: "", ctl: null };
+  S.total = S.queue.length;
+  go(state.tab, { name: "study" });
+}
+function renderStudy(v){
+  const d = S.deck, c = S.queue[0];
+  if (!c) {
+    v.innerHTML = `<div class="wrap" style="gap:16px;text-align:center;padding-top:20px">
+      <div class="score">${S.got}/${S.total}</div>
+      <h2 style="font-size:22px">${S.got === S.total ? "Every card, first try. Nice!" : "Round done. Cards you missed came back until you got them."}</h2>
+      <div class="grade"><button class="btn ghost" id="bk">Back to deck</button><button class="btn hi" id="quiz">Take a quiz</button></div></div>`;
+    $("#bk").onclick = () => go(state.tab, { name: "deck", id: d.id });
+    $("#quiz").onclick = () => startQuiz(d);
+    return;
+  }
+  v.innerHTML = `<div class="wrap" style="gap:14px">
+    <div class="row"><button class="back grow" id="bk">‹ ${esc(d.title)}</button></div>
+    <div class="progress"><span>${S.done} of ${S.total}</span><div class="bar"><i style="width:${S.total ? 100*S.done/S.total : 0}%"></i></div></div>
+    <div class="stage"><button class="flip" id="flip" aria-label="Flip card">
+      <div class="face front index"><div class="tag"><span>${esc(c.goal ? c.goal.slice(0, 32) : "Question")}</span><span>${(c.box||0) === 1 ? "Getting there" : "New"}</span></div><div class="txt">${esc(c.q)}</div></div>
+      <div class="face ans index"><div class="tag"><span>Answer</span><span>${c.check ? "Check in the book" : ""}</span></div><div class="txt">${esc(c.a)}</div></div>
+    </button></div>
+    <div id="after"></div>
+  </div>`;
+  $("#bk").onclick = () => { S.ctl?.abort(); go(state.tab, { name: "deck", id: d.id }); };
+  const flip = $("#flip");
+  const showAfter = () => {
+    $("#after").innerHTML = !S.flipped ? `<p class="hint">Think of the answer, then tap the card to check.</p>` : `
+      <div class="grade"><button class="btn again" id="again">Not yet</button><button class="btn got" id="got">Got it</button></div>
+      ${sample ? `<div style="margin-top:10px;text-align:center"><button class="back" style="align-self:center" id="exp">Explain it more simply</button></div>` : ""}
+      ${S.explain ? `<div class="explain" style="margin-top:8px">${esc(S.explain)}</div>` : ""}`;
+    if (!S.flipped) return;
+    $("#again").onclick = () => grade(false);
+    $("#got").onclick = () => grade(true);
+    if ($("#exp")) $("#exp").onclick = explain;
+  };
+  flip.onclick = () => { S.flipped = !S.flipped; flip.classList.toggle("on", S.flipped); if (S.flipped && !$("#got")) showAfter(); else if (!S.flipped) {} };
+  if (S.flipped) flip.classList.add("on");
+  showAfter();
+}
+async function explain(){
+  const c = S.queue[0]; S.ctl?.abort(); S.ctl = new AbortController();
+  S.explain = "Thinking…"; renderStudy($("#view"));
+  try {
+    await sample(`A 13-year-old is studying with this flashcard and finds it hard.\nQuestion: ${c.q}\nAnswer: ${c.a}\n\nIn the same language as the card, explain the answer in 2-3 short, friendly sentences, then give one memory trick. Plain text, no markdown.`,
+      { modelTier: "quick", signal: S.ctl.signal, onText: ({ text }) => { S.explain = text; const el = document.querySelector(".explain"); if (el) el.textContent = text; } });
+  } catch (e) { if (e?.code !== "cancelled") { S.explain = ERR[e?.code] || "Couldn't get an explanation right now."; renderStudy($("#view")); } }
+}
+function grade(ok){
+  const c = S.queue.shift(); S.ctl?.abort(); S.explain = ""; S.flipped = false;
+  if (!S.deck.example) {
+    if (ok) { c.box = Math.min(2, (c.box||0) + (c._missed ? 1 : 2)); }
+    else { c.box = 0; }
+  }
+  if (ok) { if (!c._missed) S.got++; S.done++; delete c._missed; }
+  else { c._missed = true; S.queue.splice(Math.min(S.queue.length, 3), 0, c); }
+  if (!S.deck.example && (ok || S.queue.length === 0)) saveDeck(S.deck);
+  renderStudy($("#view"));
+}
+
+/* ---------- Quiz (multiple choice) ---------- */
+let Q = null;
+function startQuiz(d){
+  const qs = shuffle(d.cards).slice(0, 15).map(c => {
+    let wrong = (c.wrong || []).filter(Boolean);
+    if (wrong.length < 3) wrong = wrong.concat(shuffle(d.cards.filter(x => x !== c).map(x => x.a)).filter(a => !wrong.includes(a))).slice(0, 3);
+    return { card: c, choices: shuffle([c.a, ...wrong.slice(0, 3)]) };
+  });
+  Q = { deck: d, qs, i: 0, score: 0, picked: null };
+  go(state.tab, { name: "quiz" });
+}
+function renderQuiz(v){
+  const d = Q.deck;
+  if (Q.i >= Q.qs.length) {
+    const pct = Math.round(100 * Q.score / Q.qs.length);
+    v.innerHTML = `<div class="wrap" style="gap:16px;text-align:center;padding-top:20px">
+      <div class="label">Quiz score</div>
+      <div class="score">${Q.score}/${Q.qs.length}</div>
+      <h2 style="font-size:22px">${pct === 100 ? "Perfect! You're ready." : pct >= 70 ? "Strong. A bit more practice on the misses." : "Good start. Study the cards once more, then retry."}</h2>
+      <div class="grade"><button class="btn ghost" id="bk">Back to deck</button><button class="btn hi" id="again">Try again</button></div></div>`;
+    $("#bk").onclick = () => go(state.tab, { name: "deck", id: d.id });
+    $("#again").onclick = () => startQuiz(d);
+    return;
+  }
+  const q = Q.qs[Q.i];
+  v.innerHTML = `<div class="wrap" style="gap:14px">
+    <button class="back" id="bk">‹ ${esc(d.title)}</button>
+    <div class="progress"><span>Question ${Q.i + 1} of ${Q.qs.length}</span><div class="bar"><i style="width:${100*Q.i/Q.qs.length}%"></i></div><span>${Q.score} right</span></div>
+    <div class="index" style="padding:12px 20px 22px"><div class="label" style="height:40px;display:flex;align-items:center">Pick the right answer</div>
+      <h2 style="font-size:clamp(20px,5vw,26px);padding-top:14px;line-height:1.3">${esc(q.card.q)}</h2></div>
+    <div class="choices" id="ch">${q.choices.map((t, i) => {
+      let cls = "";
+      if (Q.picked !== null) { if (t === q.card.a) cls = "right"; else if (i === Q.picked) cls = "wrong"; }
+      return `<button class="choice ${cls}" data-i="${i}" ${Q.picked !== null ? "disabled" : ""}>${esc(t)}</button>`; }).join("")}</div>
+    ${Q.picked !== null ? `<button class="btn" id="next">${Q.i + 1 < Q.qs.length ? "Next question" : "See my score"}</button>` : ""}
+  </div>`;
+  $("#bk").onclick = () => go(state.tab, { name: "deck", id: d.id });
+  $("#ch").onclick = e => { const b = e.target.closest("[data-i]"); if (!b || Q.picked !== null) return; Q.picked = +b.dataset.i; if (q.choices[Q.picked] === q.card.a) Q.score++; renderQuiz(v); };
+  if ($("#next")) $("#next").onclick = () => { Q.i++; Q.picked = null; renderQuiz(v); };
+}
+
+/* ---------- Shared library ---------- */
+function renderLibrary(v){
+  if (state.mode !== "db") {
+    v.innerHTML = `<div class="wrap" style="gap:14px"><h2 style="font-size:22px">Shared decks</h2>
+      <div class="panel empty">Sharing works when this page is opened in Claude while signed in. Until then, use <b>Save as file</b> on a deck and send the file to a friend.</div></div>`;
+    return;
+  }
+  const mine = new Set(state.decks.flatMap(d => [d.id, d.libId]));
+  v.innerHTML = `<div class="wrap" style="gap:14px"><h2 style="font-size:22px">Shared decks</h2>
+    <p class="muted small" style="margin:0">Decks friends and family shared. Save a copy to study it and track your own progress.</p>
+    ${state.library.length ? `<div class="decks">${state.library.map(x => `
+      <div class="deck index">
+        <h3>${esc(x.title)}</h3>
+        <div class="small muted">${x.count || x.cards?.length || 0} cards · by ${esc(x.by === state.uid ? "you" : (state.names[x.by] || "Someone"))}</div>
+        <div class="meta">${x.by === state.uid || mine.has(x.id) ? `<span class="pill">In your decks</span>` : `<button class="btn" style="min-height:38px;padding:8px 14px" data-copy="${esc(x.id)}">Save a copy</button>`}</div>
+      </div>`).join("")}</div>`
+    : `<div class="panel empty">Nothing shared yet. Open one of your decks and tap <b>Share with friends</b>.</div>`}
+  </div>`;
+  v.onclick = async e => {
+    const b = e.target.closest("[data-copy]"); if (!b) return;
+    const x = state.library.find(l => l.id === b.dataset.copy); if (!x) return;
+    b.disabled = true;
+    const deck = { id: uid(), libId: x.id, title: x.title, goals: x.goals || [], cards: (x.cards || []).map(c => cleanCard(c, x.goals || [])), createdAt: Date.now(), from: x.by };
+    await saveDeck(deck); toast("Added to My decks"); render();
+  };
+}
+
+boot();
+})();
+</script>
